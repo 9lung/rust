@@ -1,0 +1,17 @@
+1. vec_new 함수 내에서, 반환 인자로 사용 되는 vec을 단순 선언(stack에 할당) 됨으로, vec_new 종료 후, main으로 돌아갈 때, stack공간은 사라지게 되면서 문제가 생긴다.
+따라서 vec 자체를 malloc을 통해서 heap공간에 할당해준 후, 반환해야지 문제가 생기지 않는다. (vec_free 내의 free(vec)또한 이를 염두에 둔 code이다.)
+
+2. vec->data의 초기 설정이 NULL값인데, vec_push를 처음 부르게 되면, 초기화 해주지 않은채로 바로 접근하게 된다.
+
+3. free(vec->data)를 부른 후, vec_free에서도 중복적으로 free(vec->data)를 부르고 있다.
+
+4. vec_push 내의 logic에 따르면 length == capacity일 경우, 새로 malloc을 해서 정보를 옮기게 되는데,
+전에 쓰던 data 에 대한 free가 없다. 이에 따라, memory leak가 발생한다.
+
+5. 메모리 할당에 있어서, byte 크기가 고려되지 않은 채, 할당되고 있다.
+vec_push내의 malloc의 경우, int* new_data = (int*) malloc(new_capacity * sizeof(int));
+같은 형태로 바뀌어야 할 것이다.
+
+6. vec_free의 경우, vec을 먼저 free하고 vec->data를 free하는 logic 순서를 가지고 있는데,
+free후 vec이 가르키고 있는 곳은 쓰레기 값이라고 봐야되는데, 그 부분에서 vec->data를 다시 참조하는 것은 위험한 행위이다.
+따라서, free(vec->data); free(vec);의 순서로 구현되는 것이 안전한 방향으로 생각된다. 또한, free후 해당 pointer를 NULL로 처리하는 것이 안전하겠다.
